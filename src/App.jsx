@@ -1,7 +1,7 @@
 // Mi Cita: estructura general de la aplicación.
 // Escucha la sesión de Supabase y decide qué mostrar: cargando, ingreso o la pantalla elegida
 // en la barra inferior (Inicio, Mis citas, Asistente o Perfil).
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { useLetraGrande } from './lib/preferencias'
 import BarraInferior from './components/BarraInferior'
@@ -9,11 +9,15 @@ import Cargando from './components/Cargando'
 import DialogoConfirmacion from './components/DialogoConfirmacion'
 import Ingreso from './pages/Ingreso'
 import Inicio from './pages/Inicio'
-import AgendarCita from './pages/AgendarCita'
-import MisCitas from './pages/MisCitas'
-import Asistente from './pages/Asistente'
-import Perfil from './pages/Perfil'
-import NuevaContrasena from './pages/NuevaContrasena'
+// Mejora M3 (hallazgo R1 de Lighthouse): las pantallas que no se ven al abrir la app se descargan
+// solo cuando el usuario entra a ellas (división de código), así la primera carga trae menos JavaScript.
+const AgendarCita = lazy(() => import('./pages/AgendarCita'))
+const MisCitas = lazy(() => import('./pages/MisCitas'))
+const Asistente = lazy(() => import('./pages/Asistente'))
+const Perfil = lazy(() => import('./pages/Perfil'))
+const NuevaContrasena = lazy(() => import('./pages/NuevaContrasena'))
+
+const cargandoPantalla = <main className="contenedor-app contenido"><Cargando texto="Cargando…" /></main>
 
 function App() {
   const [sesion, setSesion] = useState(null)
@@ -75,13 +79,16 @@ function App() {
   if (revisando) {
     return <main className="contenedor-app contenido"><Cargando texto="Revisando tu sesión…" /></main>
   }
-  if (recuperando && sesion) return <NuevaContrasena alTerminar={() => setRecuperando(false)} />
+  if (recuperando && sesion) {
+    return <Suspense fallback={cargandoPantalla}><NuevaContrasena alTerminar={() => setRecuperando(false)} /></Suspense>
+  }
   if (!sesion) return <Ingreso />
 
   const preferenciasLetra = { letraGrande, alCambiarLetra: setLetraGrande }
 
   return (
     <>
+      <Suspense fallback={cargandoPantalla}>
       {vista === 'agendar' ? (
         <AgendarCita
           key={agendaInicial?.reprogramar?.id ?? 'nueva'}
@@ -111,6 +118,7 @@ function App() {
           {...preferenciasLetra}
         />
       )}
+      </Suspense>
       <BarraInferior vista={vista} alNavegar={navegarDesdeBarra} />
       <DialogoConfirmacion
         abierto={salidaPendiente !== null}
