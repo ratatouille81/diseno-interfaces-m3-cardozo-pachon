@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase'
 import { useLetraGrande } from './lib/preferencias'
 import BarraInferior from './components/BarraInferior'
 import Cargando from './components/Cargando'
+import DialogoConfirmacion from './components/DialogoConfirmacion'
 import Ingreso from './pages/Ingreso'
 import Inicio from './pages/Inicio'
 import AgendarCita from './pages/AgendarCita'
@@ -21,6 +22,9 @@ function App() {
   const [agendaInicial, setAgendaInicial] = useState(null) // datos para "Repetir última cita"
   const [letraGrande, setLetraGrande] = useLetraGrande()
   const [recuperando, setRecuperando] = useState(false) // llegó desde el enlace de recuperación
+  // Mejora M3 (hallazgo H2): si hay una cita a medio agendar, salir desde la barra inferior pide confirmación
+  const [agendaEnCurso, setAgendaEnCurso] = useState(false)
+  const [salidaPendiente, setSalidaPendiente] = useState(null) // sección a la que quería ir
 
   useEffect(() => {
     // 1. Al abrir la app, revisa si ya había una sesión guardada
@@ -40,6 +44,22 @@ function App() {
   function navegar(destino) {
     setVista(destino)
     window.scrollTo(0, 0)
+  }
+
+  // La barra inferior pasa por aquí: si saldría de un agendamiento sin terminar, primero pregunta
+  function navegarDesdeBarra(destino) {
+    if (vista === 'agendar' && agendaEnCurso) {
+      setSalidaPendiente(destino)
+      return
+    }
+    navegar(destino)
+  }
+
+  function confirmarSalida() {
+    const destino = salidaPendiente
+    setSalidaPendiente(null)
+    setAgendaEnCurso(false)
+    navegar(destino)
   }
 
   function agendar(inicial = null) {
@@ -68,6 +88,7 @@ function App() {
           inicial={agendaInicial}
           alTerminar={() => navegar('inicio')}
           alVerCitas={() => navegar('mis-citas')}
+          alCambiarProgreso={setAgendaEnCurso}
         />
       ) : vista === 'mis-citas' ? (
         <MisCitas
@@ -90,7 +111,17 @@ function App() {
           {...preferenciasLetra}
         />
       )}
-      <BarraInferior vista={vista} alNavegar={navegar} />
+      <BarraInferior vista={vista} alNavegar={navegarDesdeBarra} />
+      <DialogoConfirmacion
+        abierto={salidaPendiente !== null}
+        titulo="¿Salir sin terminar de agendar?"
+        textoCancelar="No, seguir agendando"
+        textoConfirmar="Sí, salir"
+        alConfirmar={confirmarSalida}
+        alCerrar={() => setSalidaPendiente(null)}
+      >
+        <p className="mb-0">Tu cita todavía no está agendada. Si sales, perderás lo que elegiste.</p>
+      </DialogoConfirmacion>
       <footer className="visually-hidden">Mi Cita es un proyecto académico. No corresponde a ninguna EPS real.</footer>
     </>
   )
