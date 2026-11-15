@@ -18,6 +18,7 @@ Este repositorio continúa la aplicación entregada en el módulo 2 (tag `v1.0.0
 | H2 (heurística 3, control y libertad) | Tocar la barra inferior a mitad del agendamiento borraba lo elegido sin aviso | Ventana de confirmación: "¿Salir sin terminar de agendar?" |
 | H3 (heurística 1, visibilidad del estado) | "Tu próxima cita" en Inicio no decía para quién era | La tarjeta muestra el paciente |
 | H4 (heurística 4, consistencia) | "Repetir última cita" no decía el paciente y agendaba siempre a nombre del titular | Muestra el paciente y lo conserva al repetir |
+| N1 (recorrido cognitivo con buyer personas) | Para agendarle a un familiar no registrado había que salir a Perfil y se perdía lo elegido | Botón "Agregar familiar a mi grupo" en el paso 1, con el mismo formulario de Perfil |
 | R3 (Lighthouse, SEO) | La página no tenía metadescripción | Se agregó la metadescripción |
 
 Se probó también cargar las pantallas bajo demanda (rama `feature/carga-diferida`), pero no se unió: el paquete inicial solo bajaba de 487 kB a 458 kB, porque la librería de Supabase se necesita desde el ingreso.
@@ -162,7 +163,7 @@ La base de datos se crea aplicando en Supabase los archivos de [`supabase/migrat
 - Ramas: `feature/diagrama-arquitectura`, `feature/base-de-datos`, `feature/autenticacion`, `feature/agendar-cita`, `feature/mis-citas`, `feature/festivos-api`, `feature/asistente-ia`, `feature/despliegue`, `feature/ui-prototipo`, `feature/grupo-familiar`, `feature/pantallas-m1` y `feature/documentacion`.
 - Mensajes de commit con prefijos `feat:`, `docs:` y `chore:`.
 - Versión final del módulo 2 marcada con el tag `v1.0.0`.
-- Módulo 3: ramas `feature/dia-sin-festivo`, `feature/paciente-en-inicio`, `feature/confirmar-salida`, `feature/rendimiento`, `feature/pipeline` y `feature/carga-diferida` (experimento no unido). La publicación pasa a GitHub Actions.
+- Módulo 3: ramas `feature/dia-sin-festivo`, `feature/paciente-en-inicio`, `feature/confirmar-salida`, `feature/rendimiento`, `feature/pipeline`, `feature/agregar-familiar-en-agendar`, `feature/readme-n1` y `feature/carga-diferida` (experimento no unido). La publicación pasa a GitHub Actions.
 
 ## Pruebas
 
