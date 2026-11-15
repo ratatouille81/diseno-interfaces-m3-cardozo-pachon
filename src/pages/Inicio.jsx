@@ -6,7 +6,7 @@ import Encabezado from '../components/Encabezado'
 import EstadoCita from '../components/EstadoCita'
 import { TarjetaAcceso } from '../components/TarjetaOpcion'
 
-const CONSULTA = 'id, estado, creada_en, agenda:agenda_id (fecha_hora, especialidad_id, sede_id, especialidad:especialidad_id (nombre), sede:sede_id (nombre))'
+const CONSULTA = 'id, paciente, familiar_id, estado, creada_en, agenda:agenda_id (fecha_hora, especialidad_id, sede_id, especialidad:especialidad_id (nombre), sede:sede_id (nombre))'
 
 function Inicio({ alAgendar, alVerCitas, alAsistente, letraGrande, alCambiarLetra }) {
   // null = cargando; después { proxima, ultima }
@@ -50,6 +50,8 @@ function Inicio({ alAgendar, alVerCitas, alAsistente, letraGrande, alCambiarLetr
           <section className="tarjeta mb-3" aria-labelledby="titulo-proxima">
             <h2 id="titulo-proxima" className="small text-secondary fw-semibold mb-1">Tu próxima cita</h2>
             <p className="h5 fw-bold mb-1">{proxima.agenda.especialidad.nombre}</p>
+            {/* Mejora M3 (hallazgo H3, heurística 1): la tarjeta dice para quién es la cita, como en Mis citas */}
+            <p className="mb-1">Paciente: {proxima.paciente}</p>
             <p className="mb-2">
               {fechaLarga(proxima.agenda.fecha_hora)}, {hora(proxima.agenda.fecha_hora)}
               <br />
@@ -72,8 +74,13 @@ function Inicio({ alAgendar, alVerCitas, alAsistente, letraGrande, alCambiarLetr
         {ultima && (
           <TarjetaAcceso
             titulo="Repetir última cita"
-            descripcion={`${ultima.agenda.especialidad.nombre}, ${ultima.agenda.sede.nombre}`}
-            alElegir={() => alAgendar({ especialidadId: ultima.agenda.especialidad_id, sedeId: ultima.agenda.sede_id })}
+            descripcion={`${ultima.agenda.especialidad.nombre}, ${ultima.agenda.sede.nombre}. Para: ${ultima.paciente}`}
+            // Mejora M3 (hallazgo H4): se repite también el paciente; antes la cita quedaba siempre a nombre del titular
+            alElegir={() => alAgendar({
+              especialidadId: ultima.agenda.especialidad_id,
+              sedeId: ultima.agenda.sede_id,
+              paciente: { paciente: ultima.paciente, familiarId: ultima.familiar_id },
+            })}
           />
         )}
         <TarjetaAcceso titulo="Mis citas" descripcion="Consulta o cancela tus citas" alElegir={alVerCitas} />
