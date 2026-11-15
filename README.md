@@ -6,9 +6,38 @@ Problema (módulo 1): "Un afiliado a una EPS que necesita atención médica nece
 
 Mi Cita es un proyecto académico genérico: no corresponde a ninguna EPS real. Sedes, especialidades y horarios son datos inventados.
 
+## Módulo 3: Quality Gate
+
+Este repositorio continúa la aplicación entregada en el módulo 2 (tag `v1.0.0`, repositorio [diseno-interfaces-m2-cardozo-pachon](https://github.com/ratatouille81/diseno-interfaces-m2-cardozo-pachon)) para la auditoría de usabilidad y calidad del módulo 3: evaluación heurística, prueba con usuarios, métricas de rendimiento, mejoras priorizadas y un pipeline de CI/CD.
+
+### Mejoras implementadas
+
+| Hallazgo | Problema | Cambio |
+|---|---|---|
+| H1 (heurística 5, prevención de errores) | El paso 3 dejaba elegido por defecto un día festivo y luego le pedía al usuario cambiarlo | El día por defecto es siempre el primer día hábil sin festivo |
+| H2 (heurística 3, control y libertad) | Tocar la barra inferior a mitad del agendamiento borraba lo elegido sin aviso | Ventana de confirmación: "¿Salir sin terminar de agendar?" |
+| H3 (heurística 1, visibilidad del estado) | "Tu próxima cita" en Inicio no decía para quién era | La tarjeta muestra el paciente |
+| H4 (heurística 4, consistencia) | "Repetir última cita" no decía el paciente y agendaba siempre a nombre del titular | Muestra el paciente y lo conserva al repetir |
+| R3 (Lighthouse, SEO) | La página no tenía metadescripción | Se agregó la metadescripción |
+
+Se probó también cargar las pantallas bajo demanda (rama `feature/carga-diferida`), pero no se unió: el paquete inicial solo bajaba de 487 kB a 458 kB, porque la librería de Supabase se necesita desde el ingreso.
+
+### Pipeline de CI/CD
+
+El archivo [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) define el workflow "Calidad y despliegue" de GitHub Actions:
+
+1. Se activa con cada push a `main`, con los pull request hacia `main` o `develop` y a mano desde la pestaña Actions.
+2. El job `calidad` corre en un runner `ubuntu-latest`: descarga el código, prepara Node.js 22, instala las dependencias con `npm ci` (las versiones exactas de `package-lock.json`), revisa el código con `npm run lint` (oxlint) y compila con `npm run build`.
+3. El job `desplegar` solo corre si `calidad` terminó bien y el evento es un push o una ejecución manual: con la CLI de Vercel trae la configuración de producción, compila y publica en Vercel.
+4. Las credenciales no están en el archivo: se leen de los secretos del repositorio (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`).
+
+El proyecto de Vercel del módulo 3 no está conectado a Git: la única vía de publicación es este pipeline.
+
 ## Demo en línea
 
-https://diseno-interfaces-m2-cardozo-pachon.vercel.app
+Módulo 3 (con las mejoras, publicada por el pipeline): https://diseno-interfaces-m3-cardozo-pachon.vercel.app
+
+Módulo 2 (versión auditada, sin cambios): https://diseno-interfaces-m2-cardozo-pachon.vercel.app
 
 Cuenta de prueba (no contiene datos reales):
 
@@ -129,10 +158,11 @@ La base de datos se crea aplicando en Supabase los archivos de [`supabase/migrat
 
 ## Gestión del proyecto
 
-- Gitflow: `main` (versión entregada), `develop` (integración) y una rama `feature/...` por funcionalidad, unida a `develop` con un pull request que describe el cambio y lo que se probó. Desde la conexión con Vercel, cada pull request se construye y se publica automáticamente como versión de prueba antes de unirse.
+- Gitflow: `main` (versión entregada), `develop` (integración) y una rama `feature/...` por funcionalidad, unida a `develop` con un pull request que describe el cambio y lo que se probó. En el módulo 2, la conexión con Vercel publicaba cada pull request como versión de prueba; en el módulo 3 esa tarea pasa al pipeline de GitHub Actions.
 - Ramas: `feature/diagrama-arquitectura`, `feature/base-de-datos`, `feature/autenticacion`, `feature/agendar-cita`, `feature/mis-citas`, `feature/festivos-api`, `feature/asistente-ia`, `feature/despliegue`, `feature/ui-prototipo`, `feature/grupo-familiar`, `feature/pantallas-m1` y `feature/documentacion`.
 - Mensajes de commit con prefijos `feat:`, `docs:` y `chore:`.
-- Versión final marcada con el tag `v1.0.0`.
+- Versión final del módulo 2 marcada con el tag `v1.0.0`.
+- Módulo 3: ramas `feature/dia-sin-festivo`, `feature/paciente-en-inicio`, `feature/confirmar-salida`, `feature/rendimiento`, `feature/pipeline` y `feature/carga-diferida` (experimento no unido). La publicación pasa a GitHub Actions.
 
 ## Pruebas
 

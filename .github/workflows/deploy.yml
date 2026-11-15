@@ -1,0 +1,68 @@
+# Pipeline de calidad y despliegue de Mi Cita (Quality Gate, módulo 3).
+# En cada push a main: instala dependencias, revisa el código con el linter, compila y,
+# si todo sale bien, publica en Vercel. En los pull request solo corre la parte de calidad,
+# para detectar errores antes de unir los cambios.
+name: Calidad y despliegue
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # permite correrlo a mano desde la pestaña Actions
+
+jobs:
+  calidad:
+    name: Instalar, revisar y compilar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias (npm ci usa las versiones exactas de package-lock.json)
+        run: npm ci
+
+      - name: Revisar el código con el linter (oxlint)
+        run: npm run lint
+
+      - name: Compilar la aplicación
+        run: npm run build
+        env:
+          # Sin estas variables la app no sabe a qué proyecto de Supabase conectarse
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+  desplegar:
+    name: Publicar en Vercel
+    needs: calidad # solo se publica si la revisión y la compilación pasaron
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar la CLI de Vercel
+        run: npm install --global vercel@latest
+
+      - name: Traer la configuración de producción del proyecto en Vercel
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Compilar para producción
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Publicar en producción
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
