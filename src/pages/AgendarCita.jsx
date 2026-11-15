@@ -26,22 +26,24 @@ const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g,
 
 const TITULAR = 'Yo (titular de la cuenta)'
 
-// Para quién era la cita que se reprograma: el titular, un familiar del grupo u otra persona
-function paraQuienInicial(reprogramar) {
-  if (!reprogramar) return 'yo'
-  if (reprogramar.familiarId) return `f-${reprogramar.familiarId}`
-  return reprogramar.paciente === TITULAR ? 'yo' : 'otra'
+// Para quién era la cita que se reprograma o se repite: el titular, un familiar del grupo u otra persona
+function paraQuienInicial(cita) {
+  if (!cita) return 'yo'
+  if (cita.familiarId) return `f-${cita.familiarId}`
+  return cita.paciente === TITULAR ? 'yo' : 'otra'
 }
 
 // "inicial" llega desde "Repetir última cita" o desde "Reprogramar", con la especialidad y la sede ya elegidas.
 // Si trae "reprogramar", al confirmar se crea la cita nueva y después se cancela la anterior.
-function AgendarCita({ inicial, alTerminar, alVerCitas }) {
+function AgendarCita({ inicial, alTerminar, alVerCitas, alCambiarProgreso }) {
   const reprogramar = inicial?.reprogramar ?? null
   const [paso, setPaso] = useState(inicial ? 3 : 1)
 
   // Datos de la cita que se va armando
-  const [paraQuien, setParaQuien] = useState(paraQuienInicial(reprogramar)) // 'yo', 'otra' o 'f-<id del familiar>'
-  const [nombre, setNombre] = useState(reprogramar && paraQuienInicial(reprogramar) === 'otra' ? reprogramar.paciente : '')
+  // Paciente que ya viene definido: el de la cita que se reprograma o el de "Repetir última cita"
+  const pacienteInicial = reprogramar ?? inicial?.paciente ?? null
+  const [paraQuien, setParaQuien] = useState(paraQuienInicial(pacienteInicial)) // 'yo', 'otra' o 'f-<id del familiar>'
+  const [nombre, setNombre] = useState(pacienteInicial && paraQuienInicial(pacienteInicial) === 'otra' ? pacienteInicial.paciente : '')
   const [busqueda, setBusqueda] = useState('')
   const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
   const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
@@ -80,6 +82,12 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
     tituloRef.current?.focus()
   }, [paso, citaCreada])
 
+  // Mejora M3 (hallazgo H2, heurística 3): avisa a App si hay datos elegidos sin confirmar,
+  // para pedir confirmación antes de salir del agendamiento desde la barra inferior.
+  useEffect(() => {
+    alCambiarProgreso?.(!citaCreada && (paso > 1 || paraQuien !== paraQuienInicial(pacienteInicial)))
+  }, [alCambiarProgreso, citaCreada, paso, paraQuien, pacienteInicial])
+
   // Carga especialidades y sedes una sola vez
   useEffect(() => {
     async function cargar() {
@@ -110,6 +118,9 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
         if (!vigente) return
         setFestivos(mapa)
         setEstadoFestivos('listo')
+        // Mejora M3 (hallazgo H1, heurística 5): el día que viene elegido por defecto nunca debe ser festivo.
+        // Antes quedaba elegido el primer día hábil aunque fuera festivo y la app le pedía al usuario cambiarlo.
+        setDia((actual) => (mapa.has(actual) ? (DIAS.find((d) => d.iso > actual && !mapa.has(d.iso))?.iso ?? actual) : actual))
       })
       .catch(() => {
         if (vigente) setEstadoFestivos('error')
@@ -185,7 +196,11 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const especialidad = especialidades.find((e) => e.id === especialidadId)
   const sede = sedes.find((s) => s.id === sedeId)
   const familiar = paraQuien.startsWith('f-') ? familiares.find((f) => `f-${f.id}` === paraQuien) : null
-  const nombrePaciente = paraQuien === 'yo' ? TITULAR : familiar ? familiar.nombre : nombre.trim()
+  // Si el familiar ya no está en el grupo, se conserva el nombre que traía la cita original
+  const nombrePaciente = paraQuien === 'yo' ? TITULAR
+    : familiar ? familiar.nombre
+    : paraQuien.startsWith('f-') ? (pacienteInicial?.paciente ?? '')
+    : nombre.trim()
 
   // Al elegir una opción se borra el aviso: el usuario ya corrigió lo que faltaba
   const conLimpieza = (setter) => (valor) => {
