@@ -11,6 +11,7 @@ import Cargando from '../components/Cargando'
 import Alerta from '../components/Alerta'
 import EstadoCita from '../components/EstadoCita'
 import { IconoConfirmada } from '../components/Iconos'
+import FormularioFamiliar from '../components/FormularioFamiliar'
 
 const TITULOS = {
   1: '¿Para quién es la cita?',
@@ -72,6 +73,8 @@ function AgendarCita({ inicial, alTerminar, alVerCitas, alCambiarProgreso }) {
   const [buscandoAlternativas, setBuscandoAlternativas] = useState(false)
 
   const [errorPaso, setErrorPaso] = useState(null)
+  // Mejora N1 (recorrido cognitivo): agregar un familiar sin salir del paso 1
+  const [agregandoFamiliar, setAgregandoFamiliar] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [citaCreada, setCitaCreada] = useState(null)
   const [avisoReprogramacion, setAvisoReprogramacion] = useState(null)
@@ -335,6 +338,24 @@ function AgendarCita({ inicial, alTerminar, alVerCitas, alCambiarProgreso }) {
               <TarjetaOpcion key={f.id} nombre="para-quien" valor={`f-${f.id}`} seleccionado={paraQuien === `f-${f.id}`}
                 alElegir={conLimpieza(setParaQuien)} titulo={f.nombre} descripcion={descripcionFamiliar(f)} />
             ))}
+            {agregandoFamiliar ? (
+              <div className="mb-3">
+                <FormularioFamiliar
+                  prefijo="agendar-familiar"
+                  alCancelar={() => setAgregandoFamiliar(false)}
+                  alGuardado={(nuevo) => {
+                    // El familiar nuevo queda en la lista y elegido, sin perder nada de lo demás
+                    setFamiliares((lista) => [...lista, nuevo].sort((x, y) => x.nombre.localeCompare(y.nombre)))
+                    conLimpieza(setParaQuien)(`f-${nuevo.id}`)
+                    setAgregandoFamiliar(false)
+                  }}
+                />
+              </div>
+            ) : (
+              <button type="button" className="btn btn-outline-primary btn-lg w-100 mb-3" onClick={() => setAgregandoFamiliar(true)}>
+                Agregar familiar a mi grupo
+              </button>
+            )}
             <TarjetaOpcion nombre="para-quien" valor="otra" seleccionado={paraQuien === 'otra'}
               alElegir={conLimpieza(setParaQuien)} titulo="Otra persona" descripcion="Escribe su nombre para esta cita" />
             {paraQuien === 'otra' && (
@@ -346,7 +367,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas, alCambiarProgreso }) {
             )}
             {familiares.length === 0 && (
               <p className="small text-secondary mt-2 mb-0">
-                ¿Agendas seguido para tu familia? Agrégalos en Perfil, en Grupo familiar, y aparecerán aquí.
+                ¿Agendas seguido para tu familia? Agrégalos una vez con "Agregar familiar a mi grupo" y aparecerán aquí en cada cita.
               </p>
             )}
           </fieldset>
