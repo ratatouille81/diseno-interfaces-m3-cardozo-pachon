@@ -35,7 +35,7 @@ function paraQuienInicial(cita) {
 
 // "inicial" llega desde "Repetir última cita" o desde "Reprogramar", con la especialidad y la sede ya elegidas.
 // Si trae "reprogramar", al confirmar se crea la cita nueva y después se cancela la anterior.
-function AgendarCita({ inicial, alTerminar, alVerCitas }) {
+function AgendarCita({ inicial, alTerminar, alVerCitas, alCambiarProgreso }) {
   const reprogramar = inicial?.reprogramar ?? null
   const [paso, setPaso] = useState(inicial ? 3 : 1)
 
@@ -81,6 +81,12 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   useEffect(() => {
     tituloRef.current?.focus()
   }, [paso, citaCreada])
+
+  // Mejora M3 (hallazgo H2, heurística 3): avisa a App si hay datos elegidos sin confirmar,
+  // para pedir confirmación antes de salir del agendamiento desde la barra inferior.
+  useEffect(() => {
+    alCambiarProgreso?.(!citaCreada && (paso > 1 || paraQuien !== paraQuienInicial(pacienteInicial)))
+  }, [alCambiarProgreso, citaCreada, paso, paraQuien, pacienteInicial])
 
   // Carga especialidades y sedes una sola vez
   useEffect(() => {
